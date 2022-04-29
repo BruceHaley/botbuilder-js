@@ -12,12 +12,16 @@ import { LanguagePolicy, LanguagePolicyConverter } from '../languagePolicy';
 import { MultiLanguageRecognizerConverter } from '../converters';
 import { languagePolicyKey } from '../languageGeneratorExtensions';
 import { AdaptiveRecognizer } from './adaptiveRecognizer';
+import { TelemetryLoggerConstants } from '../telemetryLoggerConstants';
 
 export interface MultiLanguageRecognizerConfiguration extends RecognizerConfiguration {
     languagePolicy?: Record<string, string[]> | LanguagePolicy;
     recognizers?: Record<string, string> | Record<string, Recognizer>;
 }
 
+/**
+ * Defines map of languages -> recognizer.
+ */
 export class MultiLanguageRecognizer extends AdaptiveRecognizer implements MultiLanguageRecognizerConfiguration {
     public static $kind = 'Microsoft.MultiLanguageRecognizer';
 
@@ -25,6 +29,10 @@ export class MultiLanguageRecognizer extends AdaptiveRecognizer implements Multi
 
     public recognizers: { [locale: string]: Recognizer };
 
+    /**
+     * @param property The key of the conditional selector configuration.
+     * @returns The converter for the selector configuration.
+     */
     public getConverter(property: keyof MultiLanguageRecognizerConfiguration): Converter | ConverterFactory {
         switch (property) {
             case 'languagePolicy':
@@ -36,6 +44,15 @@ export class MultiLanguageRecognizer extends AdaptiveRecognizer implements Multi
         }
     }
 
+    /**
+     * Runs current DialogContext.TurnContext.Activity through a recognizer and returns a [RecognizerResult](xref:botbuilder-core.RecognizerResult).
+     *
+     * @param dialogContext The [DialogContext](xref:botbuilder-dialogs.DialogContext) for the current turn of conversation.
+     * @param activity [Activity](xref:botframework-schema.Activity) to recognize.
+     * @param telemetryProperties Optional, additional properties to be logged to telemetry with the LuisResult event.
+     * @param telemetryMetrics Optional, additional metrics to be logged to telemetry with the LuisResult event.
+     * @returns {Promise<RecognizerResult>} Analysis of utterance.
+     */
     public async recognize(
         dialogContext: DialogContext,
         activity: Activity,
@@ -78,7 +95,7 @@ export class MultiLanguageRecognizer extends AdaptiveRecognizer implements Multi
                 );
                 this.trackRecognizerResult(
                     dialogContext,
-                    'MultiLanguageRecognizerResult',
+                    TelemetryLoggerConstants.MultiLanguageRecognizerResultEvent,
                     this.fillRecognizerResultTelemetryProperties(result, telemetryProperties, dialogContext),
                     telemetryMetrics
                 );
@@ -93,7 +110,7 @@ export class MultiLanguageRecognizer extends AdaptiveRecognizer implements Multi
         };
         this.trackRecognizerResult(
             dialogContext,
-            'MultiLanguagesRecognizerResult',
+            TelemetryLoggerConstants.MultiLanguageRecognizerResultEvent,
             this.fillRecognizerResultTelemetryProperties(recognizerResult, telemetryProperties, dialogContext),
             telemetryMetrics
         );

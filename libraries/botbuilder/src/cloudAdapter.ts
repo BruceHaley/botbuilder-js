@@ -40,6 +40,9 @@ import {
 // Note: this is _okay_ because we pass the result through `validateAndFixActivity`. Should not be used otherwise.
 const ActivityT = z.custom<Activity>((val) => z.record(z.unknown()).check(val), { message: 'Activity' });
 
+/**
+ * An adapter that implements the Bot Framework Protocol and can be hosted in different cloud environmens both public and private.
+ */
 export class CloudAdapter extends CloudAdapterBase implements BotFrameworkHttpAdapter {
     /**
      * Initializes a new instance of the [CloudAdapter](xref:botbuilder:CloudAdapter) class.
@@ -125,6 +128,7 @@ export class CloudAdapter extends CloudAdapterBase implements BotFrameworkHttpAd
         const activity = validateAndFixActivity(ActivityT.parse(req.body));
 
         if (!activity.type) {
+            console.warn('BadRequest: Missing activity or activity type.');
             return end(StatusCodes.BAD_REQUEST);
         }
 

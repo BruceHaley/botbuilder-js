@@ -22,6 +22,8 @@ import {
     DialogContext,
     DialogTurnResult,
 } from 'botbuilder-dialogs';
+import { BotFrameworkAdapter, TurnContext } from 'botbuilder';
+import { ConnectorClient } from 'botframework-connector';
 
 export interface GetActivityMembersConfiguration extends DialogConfiguration {
     activityId?: StringProperty;
@@ -39,6 +41,7 @@ export class GetActivityMembers<O extends object = {}> extends Dialog implements
 
     /**
      * Initializes a new instance of the [GetActivityMembers](xref:botbuilder-dialogs-adaptive.GetActivityMembers) class.
+     *
      * @param activityId Optional. The expression to get the value to put into property path.
      * @param property Optional. Property path to put the value in.
      */
@@ -67,6 +70,10 @@ export class GetActivityMembers<O extends object = {}> extends Dialog implements
      */
     public disabled?: BoolExpression;
 
+    /**
+     * @param property The key of the conditional selector configuration.
+     * @returns The converter for the selector configuration.
+     */
     public getConverter(property: keyof GetActivityMembersConfiguration): Converter | ConverterFactory {
         switch (property) {
             case 'activityId':
@@ -82,11 +89,12 @@ export class GetActivityMembers<O extends object = {}> extends Dialog implements
 
     /**
      * Starts a new [Dialog](xref:botbuilder-dialogs.Dialog) and pushes it onto the dialog stack.
+     *
      * @param dc The [DialogContext](xref:botbuilder-dialogs.DialogContext) for the current turn of conversation.
-     * @param options Optional. Initial information to pass to the dialog.
+     * @param _options Optional. Initial information to pass to the dialog.
      * @returns A `Promise` representing the asynchronous operation.
      */
-    public async beginDialog(dc: DialogContext, options?: O): Promise<DialogTurnResult> {
+    public async beginDialog(dc: DialogContext, _options?: O): Promise<DialogTurnResult> {
         if (this.disabled && this.disabled.getValue(dc.state)) {
             return await dc.endDialog();
         }
@@ -97,14 +105,41 @@ export class GetActivityMembers<O extends object = {}> extends Dialog implements
             id = value.toString();
         }
 
-        const adapter = dc.context.adapter;
-        if (typeof adapter['getActivityMembers'] === 'function') {
-            const result = await adapter['getActivityMembers'].getActivityMembers(dc.context, id);
-            dc.state.setValue(this.property.getValue(dc.state), result);
-            return await dc.endDialog(result);
-        } else {
-            throw new Error('getActivityMembers() not supported by the current adapter.');
+        const result = await this.getActivityMembers(dc.context, id);
+        dc.state.setValue(this.property.getValue(dc.state), result);
+        return await dc.endDialog(result);
+    }
+
+    private async getActivityMembers(context: TurnContext, activityId: string) {
+        // If no activity was passed in, use the current activity.
+        if (!activityId) {
+            activityId = context.activity.id;
         }
+
+        if (!context.activity.conversation) {
+            throw new Error('[GetActivityMembers]: Missing conversation');
+        }
+        const conversationId = context.activity.conversation.id;
+
+        if (!conversationId || conversationId.trim() === '') {
+            throw new Error('[GetActivityMembers]: Missing conversation.id');
+        }
+
+        const connectorClient = this.getConnectorClient(context);
+        const accounts = await connectorClient.conversations.getActivityMembers(conversationId, activityId);
+        return accounts;
+    }
+
+    private getConnectorClient(context: TurnContext): ConnectorClient {
+        const client =
+            context.adapter && 'createConnectorClient' in context.adapter
+                ? (context.adapter as BotFrameworkAdapter).createConnectorClient(context.activity.serviceUrl)
+                : context.turnState?.get<ConnectorClient>(context.adapter.ConnectorClientKey);
+        if (!client) {
+            throw new Error('This method requires a connector client.');
+        }
+
+        return client;
     }
 
     /**

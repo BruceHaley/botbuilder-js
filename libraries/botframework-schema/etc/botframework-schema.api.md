@@ -444,6 +444,8 @@ export enum Channels {
     // (undocumented)
     Msteams = "msteams",
     // (undocumented)
+    Omni = "omnichannel",
+    // (undocumented)
     Skype = "skype",
     // (undocumented)
     Skypeforbusiness = "skypeforbusiness",
@@ -1450,6 +1452,24 @@ export enum RoleTypes {
     Skill = "skill",
     // (undocumented)
     User = "user"
+}
+
+// @public
+export interface SearchInvokeOptions {
+    skip: number;
+    top: number;
+}
+
+// @public
+export interface SearchInvokeResponse extends AdaptiveCardInvokeResponse {
+}
+
+// @public
+export interface SearchInvokeValue {
+    context: any;
+    kind: string;
+    queryOptions: SearchInvokeOptions;
+    queryText: string;
 }
 
 // @public

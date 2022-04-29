@@ -2238,7 +2238,7 @@ export enum SemanticActionStateTypes {
 /**
  * Defines values for ChannelIds for Channels.
  * Possible values include: 'alexa', 'console', 'cortana', 'directline', 'directlinespeech', 'email',
- * 'emulator', 'facebook', 'groupme', 'kik', 'line', 'msteams', 'skype', 'skypeforbusiness',
+ * 'emulator', 'facebook', 'groupme', 'kik', 'line', 'msteams', 'onmichannel', 'skype', 'skypeforbusiness',
  * 'slack', 'sms', 'telegram', 'test', 'twilio-sms', 'webchat'
  *
  * @readonly
@@ -2256,6 +2256,7 @@ export enum Channels {
     Kik = 'kik',
     Line = 'line',
     Msteams = 'msteams',
+    Omni = 'omnichannel',
     Skype = 'skype',
     Skypeforbusiness = 'skypeforbusiness',
     Slack = 'slack',
@@ -2366,6 +2367,54 @@ export interface AdaptiveCardInvokeValue {
      */
     state: string;
 }
+
+/**
+ * Defines the structure that arrives in the Activity.Value for Invoke activity with
+ * Name of 'application/search'.
+ */
+export interface SearchInvokeValue {
+    /**
+     * The kind of the search invoke value.
+     * Must be either search, searchAnswer or typeAhead.
+     */
+    kind: string;
+    /**
+     * The query text for the search invoke value.
+     */
+    queryText: string;
+    /**
+     * The [SearchInvokeOptions](xref:botframework-schema.SearchInvokeOptions)
+     * for this search invoke value.
+     */
+    queryOptions: SearchInvokeOptions;
+    /**
+     * The the context information about the query. Such as the UI control that issued the query.
+     * The type of the context field is object and is dependent on the kind field.
+     * For search and searchAnswers, there is no defined context value.
+     */
+    context: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+}
+
+/**
+ * Provides information about the options desired for a [SearchInvokeValue](xref:botframework-schema.SearchInvokeValue)
+ */
+export interface SearchInvokeOptions {
+    /**
+     * Indicates starting reference number from which ordered search results should be returned.
+     */
+    skip: number;
+    /**
+     * Indicates the number of search results that should be returned.
+     */
+    top: number;
+}
+
+/**
+ * Defines the structure that is returned as the result of an Invoke activity with
+ * Name of 'application/search'.
+ */
+// eslint-disable-next-line @typescript-eslint/no-empty-interface
+export interface SearchInvokeResponse extends AdaptiveCardInvokeResponse {}
 
 /**
  * Represents a response returned by a bot when it receives an `invoke` activity.

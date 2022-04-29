@@ -1,15 +1,9 @@
 const { ok, strictEqual } = require('assert');
 const { stub } = require('sinon');
 const { createTelemetryClientAndStub } = require('./telemetryUtils');
-const {
-    ConversationState,
-    MemoryStorage,
-    TestAdapter,
-    MessageFactory,
-} = require('botbuilder');
+const { ConversationState, MemoryStorage, TestAdapter, MessageFactory } = require('botbuilder');
 const { DialogSet } = require('botbuilder-dialogs');
-const { UpdateActivity } = require('../lib')
-
+const { UpdateActivity, TelemetryLoggerConstants } = require('../lib');
 
 describe('UpdateActivity', function () {
     this.timeout(3000);
@@ -34,7 +28,7 @@ describe('UpdateActivity', function () {
     const dialog = new UpdateActivity('activityId', MessageFactory.text('test'));
     dialog._telemetryClient = telemetryClient;
 
-    it('eval beginDialog()', async () => {
+    it('eval beginDialog()', async function () {
         // Send initial activity
         const adapter = new TestAdapter(async (context) => {
             const updateActivitySub = stub(context, 'updateActivity');
@@ -43,7 +37,7 @@ describe('UpdateActivity', function () {
             await dialog.beginDialog(dc);
 
             // assert telemetry result
-            strictEqual(telemetryName, 'GeneratorResult');
+            strictEqual(telemetryName, TelemetryLoggerConstants.GeneratorResultEvent);
             strictEqual(telemetryProperties.result.text, 'test');
             strictEqual(telemetryProperties.template.activity.text, 'test');
 

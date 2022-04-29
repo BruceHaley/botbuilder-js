@@ -9,6 +9,7 @@ import { Activity, ActivityTypes } from 'botbuilder';
 import { BoolProperty, StringProperty } from '../properties';
 import { TextTemplate } from '../templates';
 import { TextTemplateConverter } from '../converters/textTemplateConverter';
+import { TelemetryLoggerConstants } from '../telemetryLoggerConstants';
 
 import {
     BoolExpression,
@@ -43,12 +44,14 @@ export class LogAction<O extends object = {}> extends Dialog<O> implements LogAc
 
     /**
      * Creates a new [LogAction](xref:botbuilder-dialogs-adaptive.LogAction) instance.
+     *
      * @param template The text template to log.
      */
     public constructor(text: string);
 
     /**
      * Creates a new [LogAction](xref:botbuilder-dialogs-adaptive.LogAction) instance.
+     *
      * @param text Optional. The text template to log.
      */
     public constructor(text?: string) {
@@ -79,6 +82,10 @@ export class LogAction<O extends object = {}> extends Dialog<O> implements LogAc
      */
     public disabled?: BoolExpression;
 
+    /**
+     * @param property The key of the conditional selector configuration.
+     * @returns The converter for the selector configuration.
+     */
     public getConverter(property: keyof LogActionConfiguration): Converter | ConverterFactory {
         switch (property) {
             case 'text':
@@ -96,11 +103,12 @@ export class LogAction<O extends object = {}> extends Dialog<O> implements LogAc
 
     /**
      * Starts a new [Dialog](xref:botbuilder-dialogs.Dialog) and pushes it onto the dialog stack.
+     *
      * @param dc The [DialogContext](xref:botbuilder-dialogs.DialogContext) for the current turn of conversation.
-     * @param options Optional. Initial information to pass to the dialog.
+     * @param _options Optional. Initial information to pass to the dialog.
      * @returns A `Promise` representing the asynchronous operation.
      */
-    public async beginDialog(dc: DialogContext, options?: O): Promise<DialogTurnResult> {
+    public async beginDialog(dc: DialogContext, _options?: O): Promise<DialogTurnResult> {
         if (this.disabled && this.disabled.getValue(dc.state)) {
             return await dc.endDialog();
         }
@@ -111,10 +119,11 @@ export class LogAction<O extends object = {}> extends Dialog<O> implements LogAc
 
         const msg = await this.text.bind(dc, dc.state);
         this.telemetryClient.trackEvent({
-            name: 'GeneratorResult',
+            name: TelemetryLoggerConstants.GeneratorResultEvent,
             properties: {
                 template: this.text,
                 result: msg || '',
+                context: TelemetryLoggerConstants.LogActionResultEvent,
             },
         });
 

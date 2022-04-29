@@ -5,7 +5,7 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-import type { TurnContext } from 'botbuilder';
+import type { BotFrameworkAdapter, TurnContext } from 'botbuilder';
 import { BoolProperty, StringProperty } from '../properties';
 
 import {
@@ -23,14 +23,7 @@ import {
     DialogContext,
     DialogTurnResult,
 } from 'botbuilder-dialogs';
-
-interface CompatibleAdapter {
-    getConversationMembers(context: TurnContext): unknown;
-}
-
-function isCompatibleAdapter(adapter: unknown): adapter is CompatibleAdapter {
-    return adapter && typeof (adapter as CompatibleAdapter).getConversationMembers === 'function';
-}
+import { ConnectorClient } from 'botframework-connector';
 
 export interface GetConversationMembersConfiguration extends DialogConfiguration {
     property?: StringProperty;
@@ -49,6 +42,7 @@ export class GetConversationMembers<O extends object = {}>
 
     /**
      * Initializes a new instance of the [GetConversationMembers](xref:botbuilder-dialogs-adaptive.GetConversationMembers) class.
+     *
      * @param property Property path to put the value in.
      */
     public constructor(property?: string) {
@@ -68,6 +62,10 @@ export class GetConversationMembers<O extends object = {}>
      */
     public disabled?: BoolExpression;
 
+    /**
+     * @param property The key of the conditional selector configuration.
+     * @returns The converter for the selector configuration.
+     */
     public getConverter(property: keyof GetConversationMembersConfiguration): Converter | ConverterFactory {
         switch (property) {
             case 'property':
@@ -81,23 +79,41 @@ export class GetConversationMembers<O extends object = {}>
 
     /**
      * Starts a new [Dialog](xref:botbuilder-dialogs.Dialog) and pushes it onto the dialog stack.
+     *
      * @param dc The [DialogContext](xref:botbuilder-dialogs.DialogContext) for the current turn of conversation.
-     * @param options Optional. Initial information to pass to the dialog.
+     * @param _options Optional. Initial information to pass to the dialog.
      * @returns A `Promise` representing the asynchronous operation.
      */
-    public async beginDialog(dc: DialogContext, options?: O): Promise<DialogTurnResult> {
+    public async beginDialog(dc: DialogContext, _options?: O): Promise<DialogTurnResult> {
         if (this.disabled && this.disabled.getValue(dc.state)) {
             return await dc.endDialog();
         }
+        const result = await this.getMembers(dc.context);
+        dc.state.setValue(this.property.getValue(dc.state), result);
+        return await dc.endDialog(result);
+    }
 
-        const adapter = dc.context.adapter;
-        if (isCompatibleAdapter(adapter)) {
-            const result = await adapter.getConversationMembers(dc.context);
-            dc.state.setValue(this.property.getValue(dc.state), result);
-            return await dc.endDialog(result);
-        } else {
-            throw new Error('getConversationMembers() not supported by the current adapter.');
+    private async getMembers(context: TurnContext) {
+        const conversationId = context.activity?.conversation?.id;
+        if (!conversationId) {
+            throw new Error('[GetConversationMembers]: The getMembers operation needs a valid conversation id.');
         }
+
+        const connectorClient = this.getConnectorClient(context);
+        const teamMembers = await connectorClient.conversations.getConversationMembers(conversationId);
+        return teamMembers;
+    }
+
+    private getConnectorClient(context: TurnContext): ConnectorClient {
+        const client =
+            context.adapter && 'createConnectorClient' in context.adapter
+                ? (context.adapter as BotFrameworkAdapter).createConnectorClient(context.activity.serviceUrl)
+                : context.turnState?.get<ConnectorClient>(context.adapter.ConnectorClientKey);
+        if (!client) {
+            throw new Error('This method requires a connector client.');
+        }
+
+        return client;
     }
 
     /**

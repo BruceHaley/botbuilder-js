@@ -56,6 +56,7 @@ import { ValueRecognizer } from './recognizers/valueRecognizer';
 import { SchemaHelper } from './schemaHelper';
 import { FirstSelector, MostSpecificSelector } from './selectors';
 import { TriggerSelector } from './triggerSelector';
+import { TelemetryLoggerConstants } from './telemetryLoggerConstants';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function isDialogDependencies(val: any): val is DialogDependencies {
@@ -147,12 +148,15 @@ export class AdaptiveDialog<O extends object = {}> extends DialogContainer<O> im
      */
     public defaultResultProperty = 'dialog.result';
 
+    /**
+     * Sets the JSON Schema for the dialog.
+     */
     public set schema(value: object) {
         this.dialogSchema = new SchemaHelper(value);
     }
 
     /**
-     * JSON Schema for the dialog.
+     * Gets the JSON Schema for the dialog.
      *
      * @returns The dialog schema.
      */
@@ -160,6 +164,10 @@ export class AdaptiveDialog<O extends object = {}> extends DialogContainer<O> im
         return this.dialogSchema ? this.dialogSchema.schema : undefined;
     }
 
+    /**
+     * @param property The key of the conditional selector configuration.
+     * @returns The converter for the selector configuration.
+     */
     public getConverter(property: keyof AdaptiveDialogConfiguration): Converter | ConverterFactory {
         switch (property) {
             case 'recognizer':
@@ -249,7 +257,7 @@ export class AdaptiveDialog<O extends object = {}> extends DialogContainer<O> im
     }
 
     protected onComputeId(): string {
-        return `AdaptiveDialog[]`;
+        return 'AdaptiveDialog[]';
     }
 
     /**
@@ -301,9 +309,10 @@ export class AdaptiveDialog<O extends object = {}> extends DialogContainer<O> im
         const properties: { [key: string]: string } = {
             DialogId: this.id,
             Kind: 'Microsoft.AdaptiveDialog',
+            context: TelemetryLoggerConstants.DialogStartEvent,
         };
         this.telemetryClient.trackEvent({
-            name: 'AdaptiveDialogStart',
+            name: TelemetryLoggerConstants.GeneratorResultEvent,
             properties: properties,
         });
         telemetryTrackDialogView(this.telemetryClient, this.id);
@@ -347,13 +356,13 @@ export class AdaptiveDialog<O extends object = {}> extends DialogContainer<O> im
         };
         if (reason === DialogReason.cancelCalled) {
             this.telemetryClient.trackEvent({
-                name: 'AdaptiveDialogCancel',
-                properties: properties,
+                name: TelemetryLoggerConstants.GeneratorResultEvent,
+                properties: { ...properties, context: TelemetryLoggerConstants.DialogCancelEvent },
             });
         } else if (reason === DialogReason.endCalled) {
             this.telemetryClient.trackEvent({
-                name: 'AdaptiveDialogComplete',
-                properties: properties,
+                name: TelemetryLoggerConstants.GeneratorResultEvent,
+                properties: { ...properties, context: TelemetryLoggerConstants.CompleteEvent },
             });
         }
         await super.endDialog(turnContext, instance, reason);
@@ -667,9 +676,10 @@ export class AdaptiveDialog<O extends object = {}> extends DialogContainer<O> im
                 Expression: evt.getExpression().toString(),
                 Kind: `Microsoft.${evt.constructor.name}`,
                 ConditionId: evt.id,
+                context: TelemetryLoggerConstants.TriggerEvent,
             };
             this.telemetryClient.trackEvent({
-                name: 'AdaptiveDialogTrigger',
+                name: TelemetryLoggerConstants.GeneratorResultEvent,
                 properties: properties,
             });
 

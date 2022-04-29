@@ -9,6 +9,7 @@ import { Activity, StringUtils } from 'botbuilder';
 import { ActivityTemplate, StaticActivityTemplate } from '../templates';
 import { ActivityTemplateConverter } from '../converters';
 import { BoolProperty, StringProperty, TemplateInterfaceProperty } from '../properties';
+import { TelemetryLoggerConstants } from '../telemetryLoggerConstants';
 
 import {
     StringExpression,
@@ -48,6 +49,7 @@ export class UpdateActivity<O extends object = {}> extends Dialog<O> implements 
 
     /**
      * Initializes a new instance of the [UpdateActivity](xref:botbuilder-dialogs-adaptive.UpdateActivity) class.
+     *
      * @param activityId Optional. The expression which resolves to the activityId to update.
      * @param activity Optional. Template for the [Activity](xref:botframework-schema.Activity).
      */
@@ -80,6 +82,10 @@ export class UpdateActivity<O extends object = {}> extends Dialog<O> implements 
      */
     public disabled?: BoolExpression;
 
+    /**
+     * @param property The key of the conditional selector configuration.
+     * @returns The converter for the selector configuration.
+     */
     public getConverter(property: keyof UpdateActivityConfiguration): Converter | ConverterFactory {
         switch (property) {
             case 'activity':
@@ -95,6 +101,7 @@ export class UpdateActivity<O extends object = {}> extends Dialog<O> implements 
 
     /**
      * Starts a new [Dialog](xref:botbuilder-dialogs.Dialog) and pushes it onto the dialog stack.
+     *
      * @param dc The [DialogContext](xref:botbuilder-dialogs.DialogContext) for the current turn of conversation.
      * @param options Optional. Initial information to pass to the dialog.
      * @returns A `Promise` representing the asynchronous operation.
@@ -105,7 +112,7 @@ export class UpdateActivity<O extends object = {}> extends Dialog<O> implements 
         }
 
         if (!this.activity) {
-            throw new Error(`UpdateActivity: no activity assigned for action.`);
+            throw new Error('UpdateActivity: no activity assigned for action.');
         }
 
         const data = Object.assign(
@@ -118,10 +125,11 @@ export class UpdateActivity<O extends object = {}> extends Dialog<O> implements 
         const activityResult = await this.activity.bind(dc, data);
 
         this.telemetryClient.trackEvent({
-            name: 'GeneratorResult',
+            name: TelemetryLoggerConstants.GeneratorResultEvent,
             properties: {
                 template: this.activity,
                 result: activityResult || '',
+                context: TelemetryLoggerConstants.UpdateActivityResultEvent,
             },
         });
 

@@ -8,6 +8,7 @@
 import { InputDialog, InputDialogConfiguration, InputState } from './inputDialog';
 import { IntProperty, StringProperty } from '../properties';
 import { TextTemplate } from '../templates';
+import { TelemetryLoggerConstants } from '../telemetryLoggerConstants';
 
 import {
     ConversationState,
@@ -27,9 +28,7 @@ import {
 import {
     Activity,
     ActivityTypes,
-    ExtendedUserTokenProvider,
     InputHints,
-    IUserTokenProvider,
     StatusCodes,
     TokenExchangeInvokeRequest,
     TokenResponse,
@@ -109,6 +108,10 @@ export class OAuthInput extends InputDialog implements OAuthInputConfiguration {
      */
     public timeout?: IntExpression = new IntExpression(900000);
 
+    /**
+     * @param property The key of the conditional selector configuration.
+     * @returns The converter for the selector configuration.
+     */
     public getConverter(property: keyof OAuthInputConfiguration): Converter | ConverterFactory {
         switch (property) {
             case 'connectionName':
@@ -126,6 +129,7 @@ export class OAuthInput extends InputDialog implements OAuthInputConfiguration {
 
     /**
      * Initializes a new instance of the [OAuthInput](xref:botbuilder-dialogs-adaptive.OAuthInput) class
+     *
      * @param connectionName Optional. Name of the OAuth connection being used.
      * @param title Optional. Title of the cards signin button.
      * @param text Optional. Additional text to include on the signin card.
@@ -143,6 +147,7 @@ export class OAuthInput extends InputDialog implements OAuthInputConfiguration {
 
     /**
      * Called when a prompt [Dialog](xref:botbuilder-dialogs.Dialog) is pushed onto the dialog stack and is being activated.
+     *
      * @param dc The [DialogContext](xref:botbuilder-dialogs.DialogContext) for the current turn of conversation.
      * @param options Optional. Additional information to pass to the prompt being started.
      * @returns A [DialogTurnResult](xref:botbuilder-dialogs.DialogTurnResult) `Promise` representing the asynchronous operation.
@@ -199,6 +204,7 @@ export class OAuthInput extends InputDialog implements OAuthInputConfiguration {
 
     /**
      * Called when a prompt [Dialog](xref:botbuilder-dialogs.Dialog) is the active dialog and the user replied with a new activity.
+     *
      * @param dc The [DialogContext](xref:botbuilder-dialogs.DialogContext) for the current turn of conversation.
      * @returns A [DialogTurnResult](xref:botbuilder-dialogs.DialogTurnResult) `Promise` representing the asynchronous operation.
      */
@@ -274,9 +280,10 @@ export class OAuthInput extends InputDialog implements OAuthInputConfiguration {
                         const properties = {
                             template: JSON.stringify(this.defaultValueResponse),
                             result: response ? JSON.stringify(response) : '',
+                            context: TelemetryLoggerConstants.OAuthInputResultEvent,
                         };
                         this.telemetryClient.trackEvent({
-                            name: 'GeneratorResult',
+                            name: TelemetryLoggerConstants.GeneratorResultEvent,
                             properties,
                         });
                         await dc.context.sendActivity(response);
@@ -294,8 +301,10 @@ export class OAuthInput extends InputDialog implements OAuthInputConfiguration {
 
     /**
      * Attempts to retrieve the stored token for the current user.
-     * @param context Context reference the user that's being looked up.
+     *
+     * @param dc Context reference the user that's being looked up.
      * @param code (Optional) login code received from the user.
+     * @returns A promise representing the asynchronous operation.
      */
     public getUserToken(dc: DialogContext, code?: string): Promise<TokenResponse | undefined> {
         return new OAuthPrompt(this.constructor.name, {
@@ -312,12 +321,13 @@ export class OAuthInput extends InputDialog implements OAuthInputConfiguration {
      *
      * ```JavaScript
      * const prompt = new OAuthPrompt({
-     *    connectionName: 'GitConnection',
-     *    title: 'Login To GitHub'
+     *     connectionName: 'GitConnection',
+     *     title: 'Login To GitHub'
      * });
      * await prompt.signOutUser(context);
      * ```
-     * @param context Context referencing the user that's being signed out.
+     * @param dc Context referencing the user that's being signed out.
+     * @returns A promise representing the asynchronous operation.
      */
     public async signOutUser(dc: DialogContext): Promise<void> {
         return new OAuthPrompt(this.constructor.name, {
@@ -333,10 +343,9 @@ export class OAuthInput extends InputDialog implements OAuthInputConfiguration {
     /**
      * @protected
      * Called when input has been received.
-     * @param dc The [DialogContext](xref:botbuilder-dialogs.DialogContext) for the current turn of conversation.
-     * @returns [InputState](xref:botbuilder-dialogs-adaptive.InputState) which reflects whether input was recognized as valid or not.
+     * @param _dc The [DialogContext](xref:botbuilder-dialogs.DialogContext) for the current turn of conversation.
      */
-    protected onRecognizeInput(dc: DialogContext): Promise<InputState> {
+    protected onRecognizeInput(_dc: DialogContext): Promise<InputState> {
         throw new Error('Method not implemented.');
     }
 
@@ -404,7 +413,7 @@ export class OAuthInput extends InputDialog implements OAuthInputConfiguration {
     }
 
     private isTokenExchangeRequest(obj: unknown): obj is TokenExchangeInvokeRequest {
-        if (obj.hasOwnProperty('token')) {
+        if (Object.hasOwnProperty.call(obj, 'token')) {
             return true;
         }
         return false;

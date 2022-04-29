@@ -30,17 +30,20 @@
     "@azure/cognitiveservices-luis-runtime": "2.0.0",
     "@azure/ms-rest-js": "1.9.1",
     "adaptive-expressions": "4.1.6",
-    "botbuilder-core": "4.1.6",
-    "botbuilder-dialogs": "4.1.6",
     "botbuilder-dialogs-adaptive-runtime-core": "4.1.6",
     "botbuilder-dialogs-declarative": "4.1.6",
     "lodash": "^4.17.21",
-    "node-fetch": "^2.6.0",
-    "url-parse": "^1.5.1",
+    "node-fetch": "^2.6.7",
+    "url-parse": "^1.5.9",
     "zod": "~1.11.17"
+  },
+  "resolutions": {
+    "follow-redirects": "1.14.7"
   },
   "devDependencies": {
     "@types/node-fetch": "^2.5.7",
+    "botbuilder-core": "4.1.6",
+    "botbuilder-dialogs": "4.1.6",
     "fs-extra": "^7.0.1",
     "nock": "^11.9.1"
   },

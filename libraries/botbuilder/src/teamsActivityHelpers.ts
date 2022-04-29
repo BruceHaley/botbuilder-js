@@ -12,7 +12,7 @@ function isTeamsChannelData(channelData: unknown): channelData is TeamsChannelDa
     return typeof channelData === 'object';
 }
 
-function validateActivity(activity: Activity): void {
+function validateActivity(activity: Partial<Activity>): void {
     if (!activity) {
         throw new Error('Missing activity parameter');
     }
@@ -20,6 +20,7 @@ function validateActivity(activity: Activity): void {
 
 /**
  * Gets the TeamsMeetingInfo object from the current [Activity](xref:botframework-schema.Activity).
+ *
  * @param activity The current [Activity](xref:botframework-schema.Activity).
  * @returns The current [Activity](xref:botframework-schema.Activity)'s team meeting info, or null.
  */
@@ -35,6 +36,7 @@ export function teamsGetTeamMeetingInfo(activity: Activity): TeamsMeetingInfo | 
 
 /**
  * Gets the TenantInfo object from the current [Activity](xref:botframework-schema.Activity).
+ *
  * @param activity The current [Activity](xref:botframework-schema.Activity).
  * @returns The current [Activity](xref:botframework-schema.Activity)'s tenant info, or null.
  */
@@ -50,6 +52,7 @@ export function teamsGetTenant(activity: Activity): TenantInfo | null {
 
 /**
  * Gets the TeamsInfo object from the current [Activity](xref:botframework-schema.Activity).
+ *
  * @param activity The current [Activity](xref:botframework-schema.Activity).
  * @returns The current [Activity](xref:botframework-schema.Activity)'s team's info, or null.
  */
@@ -67,6 +70,7 @@ export function teamsGetTeamInfo(activity: Activity): TeamInfo | null {
 
 /**
  * Gets the Team Id from the current [Activity](xref:botframework-schema.Activity).
+ *
  * @param activity The current [Activity](xref:botframework-schema.Activity).
  * @returns The current [Activity](xref:botframework-schema.Activity)'s team's Id, or null.
  */
@@ -76,7 +80,10 @@ export function teamsGetTeamId(activity: Activity): string | null {
 }
 
 /**
- * Activity helper methods for Teams.	 * Activity helper methods for Teams.
+ * Activity helper methods for Teams.
+ *
+ * @param activity The current [Activity](xref:botframework-schema.Activity).
+ * @returns The current [Activity](xref:botframework-schema.Activity)'s team's channel id, or null.
  */
 export function teamsGetChannelId(activity: Activity): string | null {
     validateActivity(activity);
@@ -92,9 +99,16 @@ export function teamsGetChannelId(activity: Activity): string | null {
 
 /**
  * Configures the current [Activity](xref:botframework-schema.Activity) to generate a notification within Teams.
+ *
  * @param activity The current [Activity](xref:botframework-schema.Activity).
+ * @param alertInMeeting Sent to a meeting chat, this will cause the Teams client to render it in a notification popup as well as in the chat thread.
+ * @param externalResourceUrl Url to external resource. Must be included in manifest's valid domains.
  */
-export function teamsNotifyUser(activity: Activity, alertInMeeting?: boolean, externalResourceUrl?: string): void {
+export function teamsNotifyUser(
+    activity: Partial<Activity>,
+    alertInMeeting: boolean = false,
+    externalResourceUrl?: string
+): void {
     validateActivity(activity);
 
     if (!isTeamsChannelData(activity.channelData)) {
@@ -102,6 +116,6 @@ export function teamsNotifyUser(activity: Activity, alertInMeeting?: boolean, ex
     }
 
     if (isTeamsChannelData(activity.channelData)) {
-        activity.channelData.notification = { alert: true, alertInMeeting, externalResourceUrl };
+        activity.channelData.notification = { alert: !alertInMeeting, alertInMeeting, externalResourceUrl };
     }
 }

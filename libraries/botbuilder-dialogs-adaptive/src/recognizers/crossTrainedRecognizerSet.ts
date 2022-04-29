@@ -6,11 +6,13 @@
  * Licensed under the MIT License.
  */
 
-import { merge, pickBy } from 'lodash';
+import merge from 'lodash/merge';
+import pickBy from 'lodash/pickBy';
 import { Activity, RecognizerResult, getTopScoringIntent } from 'botbuilder';
 import { Converter, ConverterFactory, DialogContext, Recognizer, RecognizerConfiguration } from 'botbuilder-dialogs';
 import { RecognizerListConverter } from '../converters';
 import { AdaptiveRecognizer } from './adaptiveRecognizer';
+import { TelemetryLoggerConstants } from '../telemetryLoggerConstants';
 
 /**
  * Standard cross trained intent name prefix.
@@ -32,6 +34,10 @@ export class CrossTrainedRecognizerSet extends AdaptiveRecognizer implements Cro
      */
     public recognizers: Recognizer[] = [];
 
+    /**
+     * @param property The key of the conditional selector configuration.
+     * @returns The converter for the selector configuration.
+     */
     public getConverter(property: keyof CrossTrainedRecognizerSetConfiguration): Converter | ConverterFactory {
         switch (property) {
             case 'recognizers':
@@ -84,7 +90,7 @@ export class CrossTrainedRecognizerSet extends AdaptiveRecognizer implements Cro
         const result = this.processResults(results);
         this.trackRecognizerResult(
             dialogContext,
-            'CrossTrainedRecognizerSetResult',
+            TelemetryLoggerConstants.CrossTrainedRecognizerSetResultEvent,
             this.fillRecognizerResultTelemetryProperties(result, telemetryProperties, dialogContext),
             telemetryMetrics
         );
