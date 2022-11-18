@@ -8,7 +8,6 @@
 
 import {
     ActivityHandler,
-    AdaptiveCardInvokeResponse,
     AppBasedLinkQuery,
     ChannelInfo,
     Channels,
@@ -34,6 +33,7 @@ import {
     tokenExchangeOperationName,
     verifyStateOperationName,
 } from 'botbuilder-core';
+import { ReadReceiptInfo } from 'botframework-connector';
 import { TeamsInfo } from './teamsInfo';
 import * as z from 'zod';
 
@@ -98,6 +98,11 @@ export class TeamsActivityHandler extends ActivityHandler {
                     case 'composeExtension/queryLink':
                         return ActivityHandler.createInvokeResponse(
                             await this.handleTeamsAppBasedLinkQuery(context, context.activity.value)
+                        );
+
+                    case 'composeExtension/anonymousQueryLink':
+                        return ActivityHandler.createInvokeResponse(
+                            await this.handleTeamsAnonymousAppBasedLinkQuery(context, context.activity.value)
                         );
 
                     case 'composeExtension/query':
@@ -382,6 +387,22 @@ export class TeamsActivityHandler extends ActivityHandler {
     }
 
     /**
+     * Receives invoke activities with Activity name of 'composeExtension/anonymousQueryLink'
+     *
+     * @remarks
+     * Used in creating a Search-based Message Extension.
+     * @param _context A context object for this turn.
+     * @param _query he invoke request body type for app-based link query.
+     * @returns The Messaging Extension Response for the query.
+     */
+    protected async handleTeamsAnonymousAppBasedLinkQuery(
+        _context: TurnContext,
+        _query: AppBasedLinkQuery
+    ): Promise<MessagingExtensionResponse> {
+        throw new Error('NotImplemented');
+    }
+
+    /**
      * Receives invoke activities with the name 'composeExtension/query'.
      *
      * @remarks
@@ -515,16 +536,6 @@ export class TeamsActivityHandler extends ActivityHandler {
     }
 
     /**
-     * Receives invoke activities with the name 'adaptiveCard/action'
-     *
-     * @param _context A context object for this turn.
-     * @returns The Messaging Extension Action Response for the query.
-     */
-    protected async handleAdaptiveCardAction(_context: TurnContext): Promise<AdaptiveCardInvokeResponse> {
-        throw new Error('NotImplemented');
-    }
-
-    /**
      * Receives invoke activities with the name 'composeExtension/setting'
      *
      * @param _context A context object for this turn.
@@ -541,60 +552,58 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @returns A promise that represents the work queued.
      */
     protected async dispatchConversationUpdateActivity(context: TurnContext): Promise<void> {
-        await this.handle(context, 'ConversationUpdate', async () => {
-            if (context.activity.channelId == 'msteams') {
-                const channelData = context.activity.channelData as TeamsChannelData;
+        if (context.activity.channelId == 'msteams') {
+            const channelData = context.activity.channelData as TeamsChannelData;
 
-                if (context.activity.membersAdded && context.activity.membersAdded.length > 0) {
-                    return await this.onTeamsMembersAdded(context);
-                }
+            if (context.activity.membersAdded && context.activity.membersAdded.length > 0) {
+                return await this.onTeamsMembersAdded(context);
+            }
 
-                if (context.activity.membersRemoved && context.activity.membersRemoved.length > 0) {
-                    return await this.onTeamsMembersRemoved(context);
-                }
+            if (context.activity.membersRemoved && context.activity.membersRemoved.length > 0) {
+                return await this.onTeamsMembersRemoved(context);
+            }
 
-                if (!channelData || !channelData.eventType) {
-                    return await super.dispatchConversationUpdateActivity(context);
-                }
-
-                switch (channelData.eventType) {
-                    case 'channelCreated':
-                        return await this.onTeamsChannelCreated(context);
-
-                    case 'channelDeleted':
-                        return await this.onTeamsChannelDeleted(context);
-
-                    case 'channelRenamed':
-                        return await this.onTeamsChannelRenamed(context);
-
-                    case 'teamArchived':
-                        return await this.onTeamsTeamArchived(context);
-
-                    case 'teamDeleted':
-                        return await this.onTeamsTeamDeleted(context);
-
-                    case 'teamHardDeleted':
-                        return await this.onTeamsTeamHardDeleted(context);
-
-                    case 'channelRestored':
-                        return await this.onTeamsChannelRestored(context);
-
-                    case 'teamRenamed':
-                        return await this.onTeamsTeamRenamed(context);
-
-                    case 'teamRestored':
-                        return await this.onTeamsTeamRestored(context);
-
-                    case 'teamUnarchived':
-                        return await this.onTeamsTeamUnarchived(context);
-
-                    default:
-                        return await super.dispatchConversationUpdateActivity(context);
-                }
-            } else {
+            if (!channelData || !channelData.eventType) {
                 return await super.dispatchConversationUpdateActivity(context);
             }
-        });
+
+            switch (channelData.eventType) {
+                case 'channelCreated':
+                    return await this.onTeamsChannelCreated(context);
+
+                case 'channelDeleted':
+                    return await this.onTeamsChannelDeleted(context);
+
+                case 'channelRenamed':
+                    return await this.onTeamsChannelRenamed(context);
+
+                case 'teamArchived':
+                    return await this.onTeamsTeamArchived(context);
+
+                case 'teamDeleted':
+                    return await this.onTeamsTeamDeleted(context);
+
+                case 'teamHardDeleted':
+                    return await this.onTeamsTeamHardDeleted(context);
+
+                case 'channelRestored':
+                    return await this.onTeamsChannelRestored(context);
+
+                case 'teamRenamed':
+                    return await this.onTeamsTeamRenamed(context);
+
+                case 'teamRestored':
+                    return await this.onTeamsTeamRestored(context);
+
+                case 'teamUnarchived':
+                    return await this.onTeamsTeamUnarchived(context);
+
+                default:
+                    return await super.dispatchConversationUpdateActivity(context);
+            }
+        } else {
+            return await super.dispatchConversationUpdateActivity(context);
+        }
     }
 
     /**
@@ -796,7 +805,7 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @param handler A callback to handle the teams members added event.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsMembersAddedEvent(
+    onTeamsMembersAddedEvent(
         handler: (
             membersAdded: TeamsChannelAccount[],
             teamInfo: TeamInfo,
@@ -817,7 +826,7 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @param handler A callback to handle the teams members removed event.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsMembersRemovedEvent(
+    onTeamsMembersRemovedEvent(
         handler: (
             membersRemoved: TeamsChannelAccount[],
             teamInfo: TeamInfo,
@@ -837,7 +846,7 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @param handler A callback to handle the teams channel created event.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsChannelCreatedEvent(
+    onTeamsChannelCreatedEvent(
         handler: (
             channelInfo: ChannelInfo,
             teamInfo: TeamInfo,
@@ -857,7 +866,7 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @param handler A callback to handle the teams channel deleted event.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsChannelDeletedEvent(
+    onTeamsChannelDeletedEvent(
         handler: (
             channelInfo: ChannelInfo,
             teamInfo: TeamInfo,
@@ -877,7 +886,7 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @param handler A callback to handle the teams channel renamed event.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsChannelRenamedEvent(
+    onTeamsChannelRenamedEvent(
         handler: (
             channelInfo: ChannelInfo,
             teamInfo: TeamInfo,
@@ -897,7 +906,7 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @param handler A callback to handle the teams team archived event.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsTeamArchivedEvent(
+    onTeamsTeamArchivedEvent(
         handler: (teamInfo: TeamInfo, context: TurnContext, next: () => Promise<void>) => Promise<void>
     ): this {
         return this.on('TeamsTeamArchived', async (context, next) => {
@@ -912,7 +921,7 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @param handler A callback to handle the teams team deleted event.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsTeamDeletedEvent(
+    onTeamsTeamDeletedEvent(
         handler: (teamInfo: TeamInfo, context: TurnContext, next: () => Promise<void>) => Promise<void>
     ): this {
         return this.on('TeamsTeamDeleted', async (context, next) => {
@@ -927,7 +936,7 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @param handler A callback to handle the teams team hard deleted event.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsTeamHardDeletedEvent(
+    onTeamsTeamHardDeletedEvent(
         handler: (teamInfo: TeamInfo, context: TurnContext, next: () => Promise<void>) => Promise<void>
     ): this {
         return this.on('TeamsTeamHardDeleted', async (context, next) => {
@@ -942,7 +951,7 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @param handler A callback to handle the teams channel restored event.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsChannelRestoredEvent(
+    onTeamsChannelRestoredEvent(
         handler: (
             channelInfo: ChannelInfo,
             teamInfo: TeamInfo,
@@ -962,7 +971,7 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @param handler A callback to handle the teams team renamed event.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsTeamRenamedEvent(
+    onTeamsTeamRenamedEvent(
         handler: (teamInfo: TeamInfo, context: TurnContext, next: () => Promise<void>) => Promise<void>
     ): this {
         return this.on('TeamsTeamRenamed', async (context, next) => {
@@ -977,7 +986,7 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @param handler A callback to handle the teams team restored event.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsTeamRestoredEvent(
+    onTeamsTeamRestoredEvent(
         handler: (teamInfo: TeamInfo, context: TurnContext, next: () => Promise<void>) => Promise<void>
     ): this {
         return this.on('TeamsTeamRestored', async (context, next) => {
@@ -992,7 +1001,7 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @param handler A callback to handle the teams team unarchived event.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsTeamUnarchivedEvent(
+    onTeamsTeamUnarchivedEvent(
         handler: (teamInfo: TeamInfo, context: TurnContext, next: () => Promise<void>) => Promise<void>
     ): this {
         return this.on('TeamsTeamUnarchived', async (context, next) => {
@@ -1012,18 +1021,18 @@ export class TeamsActivityHandler extends ActivityHandler {
      * custom event sub-type events.
      */
     protected async dispatchEventActivity(context: TurnContext): Promise<void> {
-        await this.handle(context, 'Event', async () => {
-            if (context.activity.channelId === Channels.Msteams) {
-                switch (context.activity.name) {
-                    case 'application/vnd.microsoft.meetingStart':
-                        return this.onTeamsMeetingStart(context);
-                    case 'application/vnd.microsoft.meetingEnd':
-                        return this.onTeamsMeetingEnd(context);
-                }
+        if (context.activity.channelId === Channels.Msteams) {
+            switch (context.activity.name) {
+                case 'application/vnd.microsoft.readReceipt':
+                    return this.onTeamsReadReceipt(context);
+                case 'application/vnd.microsoft.meetingStart':
+                    return this.onTeamsMeetingStart(context);
+                case 'application/vnd.microsoft.meetingEnd':
+                    return this.onTeamsMeetingEnd(context);
             }
+        }
 
-            return super.dispatchEventActivity(context);
-        });
+        return super.dispatchEventActivity(context);
     }
 
     /**
@@ -1049,12 +1058,23 @@ export class TeamsActivityHandler extends ActivityHandler {
     }
 
     /**
+     * Invoked when a read receipt for a previously sent message is received from the connector.
+     * Override this in a derived class to provide logic for when the bot receives a read receipt event.
+     *
+     * @param context The context for this turn.
+     * @returns A promise that represents the work queued.
+     */
+    protected async onTeamsReadReceipt(context: TurnContext): Promise<void> {
+        await this.handle(context, 'TeamsReadReceipt', this.defaultNextEvent(context));
+    }
+
+    /**
      * Registers a handler for when a Teams meeting starts.
      *
      * @param handler A callback that handles Meeting Start events.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsMeetingStartEvent(
+    onTeamsMeetingStartEvent(
         handler: (meeting: MeetingStartEventDetails, context: TurnContext, next: () => Promise<void>) => Promise<void>
     ): this {
         return this.on('TeamsMeetingStart', async (context, next) => {
@@ -1079,7 +1099,7 @@ export class TeamsActivityHandler extends ActivityHandler {
      * @param handler A callback that handles Meeting End events.
      * @returns A promise that represents the work queued.
      */
-    public onTeamsMeetingEndEvent(
+    onTeamsMeetingEndEvent(
         handler: (meeting: MeetingEndEventDetails, context: TurnContext, next: () => Promise<void>) => Promise<void>
     ): this {
         return this.on('TeamsMeetingEnd', async (context, next) => {
@@ -1095,6 +1115,21 @@ export class TeamsActivityHandler extends ActivityHandler {
                 context,
                 next
             );
+        });
+    }
+
+    /**
+     * Registers a handler for when a Read Receipt is sent.
+     *
+     * @param handler A callback that handles Read Receipt events.
+     * @returns A promise that represents the work queued.
+     */
+    onTeamsReadReceiptEvent(
+        handler: (receiptInfo: ReadReceiptInfo, context: TurnContext, next: () => Promise<void>) => Promise<void>
+    ): this {
+        return this.on('TeamsReadReceipt', async (context, next) => {
+            const receiptInfo = context.activity.value;
+            await handler(new ReadReceiptInfo(receiptInfo.lastReadMessageId), context, next);
         });
     }
 }

@@ -1,6 +1,7 @@
 {
   "env": {
-    "es6": true
+    "es6": true,
+    "node": true
   },
   "ignorePatterns": [
     "_ts3.4/",
@@ -44,7 +45,25 @@
   },
   "rules": {
     "@typescript-eslint/no-empty-function": "off",
-    "@typescript-eslint/no-explicit-any": "error",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+    "@typescript-eslint/ban-types": [
+      "off",
+      {
+        "types": {
+          "object": ""
+        }
+      }
+    ],
+    "@typescript-eslint/explicit-member-accessibility": [
+      "error",
+      {
+        "accessibility": "no-public",
+        "overrides": {
+          "parameterProperties": "off"
+        }
+      }
+    ],
     "@typescript-eslint/no-unused-vars": [
       "error",
       {
@@ -122,6 +141,27 @@
     },
     {
       "files": [
+        "src/**/*.ts"
+      ],
+      "plugins": ["jsdoc"],
+      "rules": {
+        "jsdoc/require-jsdoc": ["warn", {
+          "require": {
+            "FunctionDeclaration": true,
+            "MethodDefinition": false,
+            "ClassDeclaration": true,
+            "ArrowFunctionExpression": false,
+            "FunctionExpression": false
+          },
+          "publicOnly": true,
+          "contexts": [
+              "MethodDefinition:not([accessibility=/(private|protected)/]) > FunctionExpression"
+          ]
+        }]
+      }
+  },
+    {
+      "files": [
         "*.config.js"
       ],
       "env": {
@@ -129,18 +169,6 @@
       },
       "rules": {
         "@typescript-eslint/no-var-requires": "off"
-      }
-    },
-    {
-      "files": [
-        "libraries/botbuilder-ai*/**/*.ts",
-        "libraries/botbuilder-applicationinsights/**/*.ts",
-        "libraries/botbuilder-azure*/**/*.ts",
-        "libraries/botbuilder-dialogs-adaptive-runtime*/**/*.ts",
-        "libraries/botframework-streaming/**/*.ts"
-      ],
-      "rules": {
-          "@typescript-eslint/explicit-member-accessibility": ["error", { "accessibility": "no-public" }]
       }
     }
   ]

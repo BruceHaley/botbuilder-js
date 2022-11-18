@@ -5,7 +5,13 @@
  * Copyright (c) Microsoft Corporation. All rights reserved.
  * Licensed under the MIT License.
  */
-import { Activity, ActivityTypes, StringUtils, TurnContext } from 'botbuilder';
+import {
+    Activity,
+    ActivityTypes,
+    StringUtils,
+    TurnContext,
+    CACHED_BOT_STATE_SKIP_PROPERTIES_HANDLER_KEY,
+} from 'botbuilder';
 import { ActivityTemplate } from '../templates';
 import { ActivityTemplateConverter } from '../converters';
 import { AdaptiveEvents } from '../adaptiveEvents';
@@ -54,12 +60,12 @@ export interface BeginSkillConfiguration extends DialogConfiguration {
  * Begin a Skill.
  */
 export class BeginSkill extends SkillDialog implements BeginSkillConfiguration {
-    public static $kind = 'Microsoft.BeginSkill';
+    static $kind = 'Microsoft.BeginSkill';
 
     /**
      * Optional expression which if is true will disable this action.
      */
-    public disabled?: BoolExpression;
+    disabled?: BoolExpression;
 
     /**
      * Value indicating whether the new dialog should process the activity.
@@ -68,12 +74,12 @@ export class BeginSkill extends SkillDialog implements BeginSkillConfiguration {
      * The default for this will be true, which means the new dialog should not look at the activity.
      * You can set this to false to dispatch the activity to the new dialog.
      */
-    public activityProcessed = new BoolExpression(true);
+    activityProcessed = new BoolExpression(true);
 
     /**
      * Optional property path to store the dialog result in.
      */
-    public resultProperty?: StringExpression;
+    resultProperty?: StringExpression;
 
     /**
      * The Microsoft App ID that will be calling the skill.
@@ -81,7 +87,7 @@ export class BeginSkill extends SkillDialog implements BeginSkillConfiguration {
      * @remarks
      * Defauls to a value of `=settings.MicrosoftAppId` which retrievs the bots ID from settings.
      */
-    public botId = new StringExpression('=settings.MicrosoftAppId');
+    botId = new StringExpression('=settings.MicrosoftAppId');
 
     /**
      * The callback Url for the skill host.
@@ -89,38 +95,38 @@ export class BeginSkill extends SkillDialog implements BeginSkillConfiguration {
      * @remarks
      * Defauls to a value of `=settings.SkillHostEndpoint` which retrieves the endpoint from settings.
      */
-    public skillHostEndpoint = new StringExpression('=settings.SkillHostEndpoint');
+    skillHostEndpoint = new StringExpression('=settings.SkillHostEndpoint');
 
     /**
      * The Microsoft App ID for the skill.
      */
-    public skillAppId: StringExpression;
+    skillAppId: StringExpression;
 
     /**
      * The `/api/messages` endpoint for the skill.
      */
-    public skillEndpoint: StringExpression;
+    skillEndpoint: StringExpression;
 
     /**
      * Template for the activity.
      */
-    public activity: TemplateInterface<Partial<Activity>, DialogStateManager>;
+    activity: TemplateInterface<Partial<Activity>, DialogStateManager>;
 
     /**
      * Optional. The OAuth Connection Name for the Parent Bot.
      */
-    public connectionName: StringExpression;
+    connectionName: StringExpression;
 
     /**
      * The interruption policy.
      */
-    public allowInterruptions: BoolExpression;
+    allowInterruptions: BoolExpression;
 
     /**
      * @param property The key of the conditional selector configuration.
      * @returns The converter for the selector configuration.
      */
-    public getConverter(property: keyof BeginSkillConfiguration): Converter | ConverterFactory {
+    getConverter(property: keyof BeginSkillConfiguration): Converter | ConverterFactory {
         switch (property) {
             case 'disabled':
                 return new BoolExpressionConverter();
@@ -166,7 +172,7 @@ export class BeginSkill extends SkillDialog implements BeginSkillConfiguration {
      * @param options Optional. Initial information to pass to the dialog.
      * @returns A `Promise` representing the asynchronous operation.
      */
-    public async beginDialog(dc: DialogContext, options?: BeginSkillDialogOptions): Promise<DialogTurnResult> {
+    async beginDialog(dc: DialogContext, options?: BeginSkillDialogOptions): Promise<DialogTurnResult> {
         const dcState = dc.state;
         if (this.disabled && this.disabled.getValue(dcState)) {
             return await dc.endDialog();
@@ -202,6 +208,9 @@ export class BeginSkill extends SkillDialog implements BeginSkillConfiguration {
 
         // Store the initialized dialogOptions in state so we can restore these values when the dialog is resumed.
         dc.activeDialog.state[this._dialogOptionsStateKey] = this.dialogOptions;
+        const skipProperties = dc.context.turnState.get(CACHED_BOT_STATE_SKIP_PROPERTIES_HANDLER_KEY);
+        const props: (keyof SkillDialogOptions)[] = ['conversationIdFactory', 'conversationState'];
+        skipProperties(this._dialogOptionsStateKey, props);
 
         // Get the activity to send to the skill.
         options = {} as BeginSkillDialogOptions;
@@ -234,7 +243,7 @@ export class BeginSkill extends SkillDialog implements BeginSkillConfiguration {
      * @param dc The [DialogContext](xref:botbuilder-dialogs.DialogContext) for the current turn of conversation.
      * @returns A `Promise` representing the asynchronous operation.
      */
-    public async continueDialog(dc: DialogContext): Promise<DialogTurnResult> {
+    async continueDialog(dc: DialogContext): Promise<DialogTurnResult> {
         this.loadDialogOptions(dc.context, dc.activeDialog);
         const activity = dc.context.activity;
         if (activity.type == ActivityTypes.EndOfConversation) {
@@ -255,7 +264,7 @@ export class BeginSkill extends SkillDialog implements BeginSkillConfiguration {
      * @param instance [DialogInstance](xref:botbuilder-dialogs.DialogInstance), state information for this dialog.
      * @returns A `Promise` representing the asynchronous operation.
      */
-    public async repromptDialog(turnContext: TurnContext, instance: DialogInstance): Promise<void> {
+    async repromptDialog(turnContext: TurnContext, instance: DialogInstance): Promise<void> {
         this.loadDialogOptions(turnContext, instance);
         return await super.repromptDialog(turnContext, instance);
     }
@@ -269,7 +278,7 @@ export class BeginSkill extends SkillDialog implements BeginSkillConfiguration {
      * of the value returned is dependent on the child dialog.
      * @returns A `Promise` representing the asynchronous operation.
      */
-    public async resumeDialog(dc: DialogContext, reason: DialogReason, result?: any): Promise<DialogTurnResult<any>> {
+    async resumeDialog(dc: DialogContext, reason: DialogReason, result?: any): Promise<DialogTurnResult<any>> {
         this.loadDialogOptions(dc.context, dc.activeDialog);
         return await super.resumeDialog(dc, reason, result);
     }
@@ -282,7 +291,7 @@ export class BeginSkill extends SkillDialog implements BeginSkillConfiguration {
      * @param reason [DialogReason](xref:botbuilder-dialogs.DialogReason), reason why the dialog ended.
      * @returns A `Promise` representing the asynchronous operation.
      */
-    public async endDialog(turnContext: TurnContext, instance: DialogInstance, reason: DialogReason): Promise<void> {
+    async endDialog(turnContext: TurnContext, instance: DialogInstance, reason: DialogReason): Promise<void> {
         this.loadDialogOptions(turnContext, instance);
         return await super.endDialog(turnContext, instance, reason);
     }

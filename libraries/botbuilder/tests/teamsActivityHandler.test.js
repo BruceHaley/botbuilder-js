@@ -73,6 +73,8 @@ describe('TeamsActivityHandler', function () {
 
             handleTeamsAppBasedLinkQuery() {}
 
+            handleTeamsAnonymousAppBasedLinkQuery() {}
+
             handleTeamsMessagingExtensionQuery() {}
 
             handleTeamsMessagingExtensionSelectItem() {}
@@ -120,7 +122,24 @@ describe('TeamsActivityHandler', function () {
                 .startTest();
         });
 
-        it('activity.name is "composeExtension/queryLink". should return status code [200] when handleTeamsAppBasedLinkQuery method is overridden.', async function () {
+        it('activity.name is "composeExtension/anonymousQueryLink". should return status code [200] when handleTeamsAppBasedLinkQuery method is overridden.', async function () {
+            const bot = new InvokeActivityEmptyHandlers();
+
+            const adapter = new TestAdapter(async (context) => {
+                await bot.run(context);
+            });
+
+            const activity = createInvokeActivity('composeExtension/anonymousQueryLink');
+
+            await adapter
+                .send(activity)
+                .assertReply((activity) => {
+                    assert.strictEqual(activity.value.status, 200, 'should be status code 200.');
+                })
+                .startTest();
+        });
+
+        it('activity.name is "composeExtension/queryLink". should return status code [200] when handleTeamsAnonymousAppBasedLinkQuery method is overridden.', async function () {
             const bot = new InvokeActivityEmptyHandlers();
 
             const adapter = new TestAdapter(async (context) => {
@@ -2159,6 +2178,26 @@ describe('TeamsActivityHandler', function () {
                 })
                 .startTest();
         });
+
+        it('should not call ConversationUpdate twice', async function () {
+            let ncalls = 0;
+            const activity = createConvUpdateActivity();
+            const bot = new TeamsActivityHandler();
+            bot.onConversationUpdate((context, next) => {
+                ncalls++;
+                return next();
+            });
+            const adapter = new TestAdapter(async (context) => bot.run(context));
+            await adapter
+                .send(activity)
+                .then(() => {
+                    assert(
+                        ncalls === 1,
+                        'On ConversationUpdate handler should only be called once, times called: ' + ncalls.toString()
+                    );
+                })
+                .startTest();
+        });
     });
 
     describe('onEventActivity()', function () {
@@ -2302,6 +2341,76 @@ describe('TeamsActivityHandler', function () {
                 .send(activity)
                 .then(() => {
                     assert(onTeamsMeetingEndCalled);
+                    assert(onEventCalled, 'onConversationUpdate handler not called');
+                    assert(onDialogCalled, 'onDialog handler not called');
+                })
+                .startTest();
+        });
+
+        it('should not call middleware handler twice', async function () {
+            const bot = new TeamsActivityHandler();
+
+            const activity = createMeetingEventActivity(false);
+            let ncalls = 0;
+
+            bot.onEvent(async (context, next) => {
+                ncalls++;
+                await next();
+            });
+
+            const adapter = new TestAdapter(async (context) => {
+                await bot.run(context);
+            });
+
+            await adapter
+                .send(activity)
+                .then(() => {
+                    assert(ncalls === 1, 'On Event should only be called once, times called: ' + ncalls.toString());
+                })
+                .startTest();
+        });
+
+        it('onTeamsReadReceipt routed activity', async function () {
+            let onTeamsReadReceiptCalled = false;
+            const bot = new TeamsActivityHandler();
+            const activity = {
+                channelId: Channels.Msteams,
+                type: 'event',
+                name: 'application/vnd.microsoft.readReceipt',
+                value: JSON.parse('{ "lastReadMessageId": 10101010}'),
+            };
+
+            bot.onEvent(async (context, next) => {
+                assert(context, 'context not found');
+                assert(next, 'next not found');
+                onEventCalled = true;
+                await next();
+            });
+
+            bot.onTeamsReadReceiptEvent(async (receiptInfo, context, next) => {
+                assert(receiptInfo, 'receiptInfo not found');
+                assert(context, 'context not found');
+                assert(next, 'next not found');
+                assert.strictEqual(receiptInfo.lastReadMessageId, activity.value.lastReadMessageId);
+                onTeamsReadReceiptCalled = true;
+                await next();
+            });
+
+            bot.onDialog(async (context, next) => {
+                assert(context, 'context not found');
+                assert(next, 'next not found');
+                onDialogCalled = true;
+                await next();
+            });
+
+            const adapter = new TestAdapter(async (context) => {
+                await bot.run(context);
+            });
+
+            await adapter
+                .send(activity)
+                .then(() => {
+                    assert(onTeamsReadReceiptCalled);
                     assert(onEventCalled, 'onConversationUpdate handler not called');
                     assert(onDialogCalled, 'onDialog handler not called');
                 })

@@ -417,6 +417,7 @@ export interface ChannelAccount {
 export interface ChannelInfo {
     id?: string;
     name?: string;
+    type?: string;
 }
 
 // @public
@@ -437,7 +438,7 @@ export enum Channels {
     Facebook = "facebook",
     // (undocumented)
     Groupme = "groupme",
-    // (undocumented)
+    // @deprecated (undocumented)
     Kik = "kik",
     // (undocumented)
     Line = "line",
@@ -446,8 +447,10 @@ export enum Channels {
     // (undocumented)
     Omni = "omnichannel",
     // (undocumented)
-    Skype = "skype",
+    Outlook = "outlook",
     // (undocumented)
+    Skype = "skype",
+    // @deprecated (undocumented)
     Skypeforbusiness = "skypeforbusiness",
     // (undocumented)
     Slack = "slack",
@@ -459,7 +462,7 @@ export enum Channels {
     Telephony = "telephony",
     // (undocumented)
     Test = "test",
-    // (undocumented)
+    // @deprecated (undocumented)
     Twilio = "twilio-sms",
     // (undocumented)
     Webchat = "webchat"
@@ -928,8 +931,8 @@ export interface Meeting {
 // @public
 export interface MeetingDetails extends MeetingDetailsBase {
     msGraphResourceId: string;
-    scheduledEndTime: Date;
-    scheduledStartTime: Date;
+    scheduledEndTime?: Date;
+    scheduledStartTime?: Date;
     type: string;
 }
 
@@ -1116,7 +1119,7 @@ export interface MessagingExtensionResult {
 }
 
 // @public
-export type MessagingExtensionResultType = 'result' | 'auth' | 'config' | 'message' | 'botMessagePreview';
+export type MessagingExtensionResultType = 'result' | 'auth' | 'config' | 'message' | 'botMessagePreview' | 'silentAuth';
 
 // @public
 export interface MessagingExtensionSuggestedAction {
@@ -1665,6 +1668,7 @@ export interface TeamDetails {
     id?: string;
     memberCount?: number;
     name?: string;
+    type?: string;
 }
 
 // @public
@@ -1696,8 +1700,15 @@ export interface TeamsChannelData {
     eventType?: string;
     meeting?: TeamsMeetingInfo;
     notification?: NotificationInfo;
+    settings?: TeamsChannelDataSettings;
     team?: TeamInfo;
     tenant?: TenantInfo;
+}
+
+// @public
+export interface TeamsChannelDataSettings {
+    [properties: string]: unknown;
+    selectedChannel?: ChannelInfo;
 }
 
 // @public

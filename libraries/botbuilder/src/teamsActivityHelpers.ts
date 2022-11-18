@@ -19,6 +19,18 @@ function validateActivity(activity: Partial<Activity>): void {
 }
 
 /**
+ * Gets the Team's selected channel id from the current activity.
+ *
+ * @param activity The current [Activity](xref:botframework-schema.Activity).
+ * @returns The current activity's team's selected channel, or empty string.
+ */
+export function teamsGetSelectedChannelId(activity: Activity): string {
+    validateActivity(activity);
+
+    return activity.channelData?.settings?.selectedChannel?.id ?? '';
+}
+
+/**
  * Gets the TeamsMeetingInfo object from the current [Activity](xref:botframework-schema.Activity).
  *
  * @param activity The current [Activity](xref:botframework-schema.Activity).
@@ -106,7 +118,7 @@ export function teamsGetChannelId(activity: Activity): string | null {
  */
 export function teamsNotifyUser(
     activity: Partial<Activity>,
-    alertInMeeting: boolean = false,
+    alertInMeeting = false,
     externalResourceUrl?: string
 ): void {
     validateActivity(activity);

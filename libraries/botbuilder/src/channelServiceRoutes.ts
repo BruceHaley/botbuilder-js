@@ -47,7 +47,7 @@ export class ChannelServiceRoutes {
      * @param server WebServer
      * @param basePath Optional basePath which is appended before the service's REST API is configured on the WebServer.
      */
-    public register(server: WebServer, basePath = ''): void {
+    register(server: WebServer, basePath = ''): void {
         server.post(basePath + RouteConstants.Activities, this.processSendToConversation.bind(this));
         server.post(basePath + RouteConstants.Activity, this.processReplyToActivity.bind(this));
         server.put(basePath + RouteConstants.Activity, this.processUpdateActivity.bind(this));
@@ -55,6 +55,7 @@ export class ChannelServiceRoutes {
         server.post(basePath + RouteConstants.Conversations, this.processCreateConversation.bind(this));
         server.get(basePath + RouteConstants.Conversations, this.processGetConversations.bind(this));
         server.get(basePath + RouteConstants.ConversationMembers, this.processGetConversationMembers.bind(this));
+        server.get(basePath + RouteConstants.ConversationMember, this.processGetConversationMember.bind(this));
         server.get(
             basePath + RouteConstants.ConversationPagedMembers,
             this.processGetConversationPagedMembers.bind(this)
@@ -248,6 +249,25 @@ export class ChannelServiceRoutes {
     /**
      * @private
      */
+    private processGetConversationMember(req: WebRequest, res: WebResponse): void {
+        const authHeader = req.headers.authorization || req.headers.Authorization || '';
+        this.channelServiceHandler
+            .handleGetConversationMember(authHeader, req.params.memberId, req.params.conversationId)
+            .then((channelAccount) => {
+                res.status(200);
+                if (channelAccount) {
+                    res.send(channelAccount);
+                }
+                res.end();
+            })
+            .catch((err) => {
+                ChannelServiceRoutes.handleError(err, res);
+            });
+    }
+
+    /**
+     * @private
+     */
     private processGetConversationPagedMembers(req: WebRequest, res: WebResponse): void {
         const authHeader = req.headers.authorization || req.headers.Authorization || '';
         let pageSize = parseInt(req.query.pageSize);
@@ -382,7 +402,8 @@ export class ChannelServiceRoutes {
                 }
             } else {
                 let requestData = '';
-                req.on('data', (chunk) => {
+                // eslint-disable-next-line prettier/prettier
+                req.on('data', (chunk) => { // lgtm[js/stack-trace-exposure]
                     requestData += chunk;
                 });
                 req.on('end', () => {

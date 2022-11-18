@@ -419,7 +419,8 @@ const testCases = [
             ['bool(0)', false],
             ['bool(null)', false],
             ['bool(hello * 5)', false],
-            ["bool('false')", true], // we make it true, because it is not empty
+            ["bool('false')", false],
+            ["bool('true')", true],
             ["bool('hi')", true],
             ['[1,2,3]', [1, 2, 3]],
             ['[1,2,3, [4,5]]', [1, 2, 3, [4, 5]]],
@@ -894,6 +895,8 @@ const testCases = [
             ['isMatch("1", "\\\\d{1}")', true], // "\d" (match [0-9])
             ['isMatch("12.5", "[0-9]+(\\\\.5)")', true], // "\." (match .)
             ['isMatch("12x5", "[0-9]+(\\\\.5)")', false], // "\." (match .)
+            ["isMatch('', '[0-9]')", false], // empty string
+            ["isMatch(nullObj, '[0-9]')", false], // null object
         ],
     },
     {

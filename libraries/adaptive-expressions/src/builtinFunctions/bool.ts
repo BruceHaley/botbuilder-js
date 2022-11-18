@@ -18,7 +18,7 @@ export class Bool extends ComparisonEvaluator {
     /**
      * Initializes a new instance of the [Bool](xref:adaptive-expressions.Bool) class.
      */
-    public constructor() {
+    constructor() {
         super(ExpressionType.Bool, Bool.func, FunctionUtils.validateUnary);
     }
 
@@ -28,6 +28,10 @@ export class Bool extends ComparisonEvaluator {
     private static func(args: any[]): boolean {
         if (FunctionUtils.isNumber(args[0])) {
             return args[0] !== 0;
+        }
+
+        if (/false/i.test(args[0])) {
+            return false;
         }
 
         return InternalFunctionUtils.isLogicTrue(args[0]);

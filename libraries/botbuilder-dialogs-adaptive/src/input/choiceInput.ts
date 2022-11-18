@@ -34,6 +34,7 @@ import {
     TemplateInterface,
 } from 'botbuilder-dialogs';
 import { TelemetryLoggerConstants } from '../telemetryLoggerConstants';
+import { ChoiceOptionsSet } from './choiceOptionsSet';
 
 export enum ChoiceOutputFormat {
     value = 'value',
@@ -57,7 +58,7 @@ export interface ChoiceInputConfiguration extends InputDialogConfiguration {
  * ChoiceInput - Declarative input to gather choices from user.
  */
 export class ChoiceInput extends InputDialog implements ChoiceInputConfiguration {
-    public static $kind = 'Microsoft.ChoiceInput';
+    static $kind = 'Microsoft.ChoiceInput';
 
     /**
      * Default options for rendering the choices to the user based on locale.
@@ -76,7 +77,7 @@ export class ChoiceInput extends InputDialog implements ChoiceInputConfiguration
     /**
      * List of choices to present to user.
      */
-    public choices: ObjectExpression<ChoiceSet> = new ObjectExpression();
+    choices: ObjectExpression<ChoiceSet> = new ObjectExpression();
 
     /**
      * Style of the "yes" and "no" choices rendered to the user when prompting.
@@ -84,36 +85,34 @@ export class ChoiceInput extends InputDialog implements ChoiceInputConfiguration
      * @remarks
      * Defaults to `ListStyle.auto`.
      */
-    public style: EnumExpression<ListStyle> = new EnumExpression<ListStyle>(ListStyle.auto);
+    style: EnumExpression<ListStyle> = new EnumExpression<ListStyle>(ListStyle.auto);
 
     /**
      * The prompts default locale that should be recognized.
      */
-    public defaultLocale?: StringExpression;
+    defaultLocale?: StringExpression;
 
     /**
      * Control the format of the response (value or index of the choice).
      */
-    public outputFormat: EnumExpression<ChoiceOutputFormat> = new EnumExpression<ChoiceOutputFormat>(
-        ChoiceOutputFormat.value
-    );
+    outputFormat: EnumExpression<ChoiceOutputFormat> = new EnumExpression<ChoiceOutputFormat>(ChoiceOutputFormat.value);
 
     /**
      * Additional options passed to the `ChoiceFactory` and used to tweak the style of choices
      * rendered to the user.
      */
-    public choiceOptions?: ObjectExpression<ChoiceFactoryOptions> = new ObjectExpression();
+    choiceOptions?: ObjectExpression<ChoiceFactoryOptions> = new ObjectExpression();
 
     /**
      * Additional options passed to the underlying `recognizeChoices()` function.
      */
-    public recognizerOptions?: ObjectExpression<FindChoicesOptions> = new ObjectExpression();
+    recognizerOptions?: ObjectExpression<FindChoicesOptions> = new ObjectExpression();
 
     /**
      * @param property The key of the conditional selector configuration.
      * @returns The converter for the selector configuration.
      */
-    public getConverter(property: keyof ChoiceInputConfiguration): Converter | ConverterFactory {
+    getConverter(property: keyof ChoiceInputConfiguration): Converter | ConverterFactory {
         switch (property) {
             case 'choices':
                 return new ObjectExpressionConverter<ChoiceSet>();
@@ -134,6 +133,10 @@ export class ChoiceInput extends InputDialog implements ChoiceInputConfiguration
 
     /**
      * {@inheritDoc InputDialog.trackGeneratorResultEvent}
+     *
+     * @param dc The [DialogContext](xref:botbuilder-dialogs.DialogContext) for the current turn of conversation.
+     * @param activityTemplate Used to create the Activity.
+     * @param msg The Partial [Activity](xref:botframework-schema.Activity) which will be sent.
      */
     protected trackGeneratorResultEvent(
         dc: DialogContext,
@@ -224,8 +227,8 @@ export class ChoiceInput extends InputDialog implements ChoiceInputConfiguration
         // Format prompt to send
         const prompt = await super.onRenderPrompt(dc, state);
         const channelId = dc.context.activity.channelId;
-        const choiceOptions =
-            (this.choiceOptions && this.choiceOptions.getValue(dc.state)) || ChoiceInput.defaultChoiceOptions[locale];
+        const opts = await this.getChoiceOptions(dc, locale);
+        const choiceOptions = opts ?? ChoiceInput.defaultChoiceOptions[locale];
         const style = this.style.getValue(dc.state);
         const options = dc.state.getValue(ChoiceInput.OPTIONS_PROPERTY);
         return this.appendChoices(prompt, channelId, options.choices, style, choiceOptions);
@@ -237,6 +240,24 @@ export class ChoiceInput extends InputDialog implements ChoiceInputConfiguration
      */
     protected onComputeId(): string {
         return `ChoiceInput[${this.prompt && this.prompt.toString()}]`;
+    }
+
+    private async getChoiceOptions(dc: DialogContext, locale: string): Promise<ChoiceFactoryOptions> {
+        if (!this.choiceOptions) {
+            return ChoiceInput.defaultChoiceOptions[locale];
+        }
+
+        if (
+            this.choiceOptions.expressionText != null &&
+            this.choiceOptions.expressionText.trimStart().startsWith('${')
+        ) {
+            // use TemplateInterface to bind (aka LG)
+            const choiceOptionsSet = new ChoiceOptionsSet(this.choiceOptions.expressionText);
+            return choiceOptionsSet.bind(dc);
+        } else {
+            // use Expression to bind
+            return this.choiceOptions.getValue(dc.state);
+        }
     }
 
     private getChoiceSet(dc: DialogContext): Promise<ChoiceSet> {

@@ -21,7 +21,7 @@ export class IsMatch extends ExpressionEvaluator {
     /**
      * Initializes a new instance of the [IsMatch](xref:adaptive-expressions.IsMatch) class.
      */
-    public constructor() {
+    constructor() {
         super(ExpressionType.IsMatch, IsMatch.evaluator(), ReturnType.Boolean, IsMatch.validator);
     }
 
@@ -30,17 +30,10 @@ export class IsMatch extends ExpressionEvaluator {
      */
     private static evaluator(): EvaluateExpressionDelegate {
         return FunctionUtils.applyWithError((args: any[]): any => {
-            let value = false;
-            let error: string;
-            if (args[0] === undefined || args[0] === '') {
-                value = false;
-                error = 'regular expression is empty.';
-            } else {
-                const regex: RegExp = CommonRegex.CreateRegex(args[1].toString());
-                value = regex.test(args[0].toString());
-            }
-
-            return { value, error };
+            const regex: RegExp = CommonRegex.CreateRegex(args[1].toString());
+            const inputString = args[0] ? args[0].toString() : '';
+            const value = regex.test(inputString);
+            return { value, undefined };
         }, FunctionUtils.verifyStringOrNull);
     }
 
